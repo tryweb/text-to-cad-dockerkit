@@ -27,6 +27,7 @@ RUN python3.11 -m venv "$VIRTUAL_ENV"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=upstream-fetcher /upstream/text-to-cad /upstream/text-to-cad
 WORKDIR /upstream/text-to-cad
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir build123d numpy ocp-vscode playwright && \
     pip install --no-cache-dir skills/cad/scripts/packages/cadpy && \
@@ -55,8 +56,11 @@ RUN curl -fsSL \
     -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd
 COPY --from=builder /upstream/text-to-cad /opt/upstream-src
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /opt/playwright-browsers /opt/playwright-browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 ENV PATH="/opt/venv/bin:$PATH"
-COPY --from=node:20-slim /usr/local/bin/node /usr/local/bin/node
+RUN python -m playwright install-deps chromium
+COPY --from=node:20-slim /usr/local/bin/ /usr/local/bin/
 COPY --from=node:20-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /tmp/opencode-stage/opencode /usr/local/bin/opencode
 COPY --from=builder /tmp/opencode-stage/opencode-ai /usr/local/lib/node_modules/opencode-ai
