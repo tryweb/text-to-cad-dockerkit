@@ -77,9 +77,20 @@ Generated models persist in `/workspace/models` and `/workspace/output`.
 ### Artifact layout convention
 
 - `/workspace/models` is the canonical viewer-visible CAD artifact directory.
-- If a tool writes supported CAD files directly under `/workspace` (for example
-  `table.step`), the entrypoint mirrors them into `/workspace/models`.
-- This keeps viewer discovery consistent while preserving the original root file.
+- The entrypoint recursively mirrors every file under `/workspace` whose
+  name matches a supported CAD extension
+  (`.step`, `.stp`, `.stl`, `.3mf`, `.glb`, `.gcode`, `.dxf`, `.urdf`,
+  `.srdf`, `.sdf`, plus hidden `.step.glb` / `.stp.glb` / `.step.js` /
+  `.stp.js` previews) into `/workspace/models`, **preserving the relative
+  path of each file**. A file at `/workspace/<sub>/<name>.step` lands at
+  `/workspace/models/<sub>/<name>.step`.
+- The scan is capped at depth 3 and skips the system directories
+  `.opencode`, `.git`, `__pycache__`, and `node_modules` so generated
+  caches, dependencies, and skill symlinks are never mirrored.
+- This keeps viewer discovery consistent while preserving the original
+  directory layout, so generators that keep a STEP next to its Python
+  source (e.g. `/workspace/vtm-130t/vtm_130t_gearbox.{py,step}`) work
+  without flattening the project tree.
 
 ## Upgrading to a new upstream version
 

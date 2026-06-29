@@ -37,26 +37,34 @@ is_root_cad_artifact() {
     return 1
 }
 
-sync_root_cad_artifacts() {
+sync_cad_artifacts() {
+    local mirror_max_depth=3
+    local mirror_exclude_paths=(
+        "${CAD_VIEWER_ROOT}/*"
+        "*/.opencode/*"
+        "*/.git/*"
+        "*/__pycache__/*"
+        "*/node_modules/*"
+    )
+    local find_excludes=()
+    local p
+    for p in "${mirror_exclude_paths[@]}"; do
+        find_excludes+=( -not -path "$p" )
+    done
+
     mkdir -p "${CAD_VIEWER_ROOT}"
 
-    local source_path artifact_name target_path
-    for source_path in "${WORKSPACE}"/* "${WORKSPACE}"/.*; do
-        artifact_name=$(basename "${source_path}")
+    local source_path rel_path target_path
+    while IFS= read -r -d '' source_path; do
+        rel_path="${source_path#${WORKSPACE}/}"
 
-        if [ ! -e "${source_path}" ]; then
+        if [ ! -f "${source_path}" ] || ! is_root_cad_artifact "$(basename "${source_path}")"; then
             continue
         fi
 
-        if [ "${source_path}" = "${CAD_VIEWER_ROOT}" ] || [ "${artifact_name}" = "." ] || [ "${artifact_name}" = ".." ]; then
-            continue
-        fi
+        target_path="${CAD_VIEWER_ROOT}/${rel_path}"
+        mkdir -p "$(dirname "${target_path}")"
 
-        if [ ! -f "${source_path}" ] || ! is_root_cad_artifact "${artifact_name}"; then
-            continue
-        fi
-
-        target_path="${CAD_VIEWER_ROOT}/${artifact_name}"
         if [ -L "${target_path}" ]; then
             rm -f "${target_path}"
         fi
@@ -67,16 +75,18 @@ sync_root_cad_artifacts() {
 
         cp -f "${source_path}" "${target_path}"
         chown "${LOCAL_UID}:${LOCAL_GID}" "${target_path}" 2>/dev/null || true
-        echo "[entrypoint]   mirrored CAD artifact into models/: ${artifact_name}"
-    done
+        echo "[entrypoint]   mirrored CAD artifact into models/: ${rel_path}"
+    done < <(find "${WORKSPACE}" -mindepth 1 -maxdepth "${mirror_max_depth}" -type f \
+        "${find_excludes[@]}" \
+        -print0)
 }
 
 start_artifact_sync_loop() {
-    sync_root_cad_artifacts
+    sync_cad_artifacts
     (
         while true; do
             sleep 2
-            sync_root_cad_artifacts
+            sync_cad_artifacts
         done
     ) &
     pids+=($!)
