@@ -1,0 +1,19 @@
+# Environment config (user-specific UID/GID, ports)
+.env
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+.docker/
+
+# Script output (if run locally outside Docker)
+upstream-*/
