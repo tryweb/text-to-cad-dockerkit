@@ -44,6 +44,12 @@ docker compose up -d
 | `VIEWER_HOST_PORT` | `3002` | Host port for the CAD Viewer |
 | `WORKSPACE_VOLUME_NAME` | `cad-workbench-workspace` | Named volume for `/workspace` persistence |
 
+opencode auth (`auth.json`), config, and cache are persisted in dedicated named
+volumes (`cad-workbench-opencode-data` / `-config` / `-cache`) so they survive
+`docker compose down && up` and image rebuilds. Wiping the workspace volume does
+not force an opencode re-login. To force one, drop the data volume:
+`docker volume rm cad-workbench-opencode-data`.
+
 ## Usage
 
 ### Terminal access
