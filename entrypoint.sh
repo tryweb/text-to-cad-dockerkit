@@ -84,9 +84,17 @@ sync_cad_artifacts() {
 start_artifact_sync_loop() {
     sync_cad_artifacts
     (
+        local prev_count
+        prev_count=$(find "${CAD_VIEWER_ROOT}" -type f 2>/dev/null | wc -l)
         while true; do
             sleep 2
             sync_cad_artifacts
+            local new_count
+            new_count=$(find "${CAD_VIEWER_ROOT}" -type f 2>/dev/null | wc -l)
+            if [ "$new_count" -gt "$prev_count" ]; then
+                restart_viewer
+                prev_count=$new_count
+            fi
         done
     ) &
     pids+=($!)
@@ -171,18 +179,31 @@ start_ttyd() {
 
 start_viewer() {
     local viewer_dir="${UPSTREAM_SRC}/skills/cad-viewer/scripts/viewer"
-    if [ -f "${viewer_dir}/backend/server.mjs" ]; then
-        echo "[entrypoint] Starting CAD Viewer on port ${VIEWER_HOST_PORT} (root ${CAD_VIEWER_ROOT})..."
-        cd "${viewer_dir}"
-        NODE_ENV=production node backend/server.mjs \
-            --host 0.0.0.0 \
-            --port "${VIEWER_HOST_PORT}" \
-            --dir "${CAD_VIEWER_ROOT}" &
-        pids+=($!)
-        cd /
-    else
+    if [ ! -f "${viewer_dir}/backend/server.mjs" ]; then
         echo "[entrypoint] WARNING: Viewer server.mjs not found — viewer unavailable."
+        return
     fi
+    echo "[entrypoint] Starting CAD Viewer on port ${VIEWER_HOST_PORT} (root ${CAD_VIEWER_ROOT})..."
+    cd "${viewer_dir}"
+    NODE_ENV=production node backend/server.mjs \
+        --host 0.0.0.0 \
+        --port "${VIEWER_HOST_PORT}" \
+        --dir "${CAD_VIEWER_ROOT}" &
+    local pid=$!
+    echo "$pid" > /tmp/viewer.pid
+    pids+=("$pid")
+    cd /
+}
+
+restart_viewer() {
+    local old_pid
+    old_pid=$(cat /tmp/viewer.pid 2>/dev/null)
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        echo "[entrypoint] Restarting CAD Viewer (PID $old_pid) to refresh catalog..."
+        kill "$old_pid" 2>/dev/null
+        wait "$old_pid" 2>/dev/null || true
+    fi
+    start_viewer
 }
 
 # --- Signal handler ----------------------------------------------------
