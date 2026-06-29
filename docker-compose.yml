@@ -1,0 +1,25 @@
+services:
+  cad-workbench:
+    build:
+      context: .
+      args:
+        TEXT_TO_CAD_VERSION: ${TEXT_TO_CAD_VERSION:-0.3.7}
+    image: text-to-cad-workbench
+    container_name: cad-workbench
+    restart: unless-stopped
+    environment:
+      - LOCAL_UID=${LOCAL_UID:-1000}
+      - LOCAL_GID=${LOCAL_GID:-1000}
+      - OPENCODE_TTYD_PORT=${OPENCODE_TTYD_PORT:-3001}
+      - VIEWER_HOST_PORT=${VIEWER_HOST_PORT:-3002}
+    ports:
+      - "${OPENCODE_TTYD_PORT:-3001}:${OPENCODE_TTYD_PORT:-3001}"
+      - "${VIEWER_HOST_PORT:-3002}:${VIEWER_HOST_PORT:-3002}"
+    volumes:
+      - "${WORKSPACE_VOLUME_NAME:-cad-workbench-workspace}:/workspace"
+    stdin_open: true
+    tty: true
+
+volumes:
+  cad-workbench-workspace:
+    name: ${WORKSPACE_VOLUME_NAME:-cad-workbench-workspace}
