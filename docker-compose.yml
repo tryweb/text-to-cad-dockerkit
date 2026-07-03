@@ -2,8 +2,6 @@ services:
   cad-workbench:
     build:
       context: .
-      args:
-        TEXT_TO_CAD_VERSION: ${TEXT_TO_CAD_VERSION:-0.3.7}
     image: text-to-cad-workbench
     container_name: cad-workbench
     restart: unless-stopped

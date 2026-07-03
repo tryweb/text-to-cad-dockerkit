@@ -5,13 +5,19 @@ set -euo pipefail
 # outside the Docker build (for local inspection or CI pinning).
 #
 # Usage:
-#   TEXT_TO_CAD_VERSION=0.3.7 ./scripts/fetch-upstream.sh [--output-dir <dir>]
+#   ./scripts/fetch-upstream.sh [version] [output-dir]
 #
+# Default version: pinned `TEXT_TO_CAD_VERSION` from ./Dockerfile
 # Default output: ./upstream-<version>/
 
-: "${TEXT_TO_CAD_VERSION:?Set TEXT_TO_CAD_VERSION to the upstream release tag}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+DEFAULT_VERSION="$(sed -n 's/^ARG TEXT_TO_CAD_VERSION=//p' "${REPO_ROOT}/Dockerfile" | head -n1)"
+TEXT_TO_CAD_VERSION="${1:-${TEXT_TO_CAD_VERSION:-${DEFAULT_VERSION}}}"
 
-OUTPUT_DIR="${1:-./upstream-${TEXT_TO_CAD_VERSION}}"
+: "${TEXT_TO_CAD_VERSION:?Unable to resolve TEXT_TO_CAD_VERSION from argument, environment, or Dockerfile}"
+
+OUTPUT_DIR="${2:-./upstream-${TEXT_TO_CAD_VERSION}}"
 ARCHIVE_URL="https://github.com/earthtojake/text-to-cad/archive/refs/tags/${TEXT_TO_CAD_VERSION}.tar.gz"
 
 echo "[fetch-upstream] Fetching upstream ${TEXT_TO_CAD_VERSION}..."
