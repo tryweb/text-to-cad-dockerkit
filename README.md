@@ -262,7 +262,7 @@ creates a GitHub Release with the image pull command.
 | Variable | Purpose |
 |---|---|
 | `REGISTRY` | Container registry (default: `ghcr.io`) |
-| `IMAGE_NAMESPACE` | Org/repo path for the image (default: `earthtojake/text-to-cad-dockerkit`) |
+| `IMAGE_NAMESPACE` | Org/repo path for the image (default: `tryweb/text-to-cad-dockerkit`) |
 | `IMAGE_TAG` | Image tag for production compose (default: `latest`) |
 
 ## Release Process

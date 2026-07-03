@@ -3,7 +3,7 @@ services:
     # Production image from GitHub Container Registry.
     # For local development, use docker-compose.dev.yml:
     #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-    image: ghcr.io/${IMAGE_NAMESPACE:-earthtojake/text-to-cad-dockerkit}:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_NAMESPACE:-tryweb/text-to-cad-dockerkit}:${IMAGE_TAG:-latest}
     container_name: cad-workbench
     restart: unless-stopped
     environment:

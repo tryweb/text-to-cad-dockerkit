@@ -194,11 +194,11 @@ pull_image() {
     header "6. 拉取最新 Docker 映像"
 
     local old_id
-    old_id=$(docker images --filter "reference=ghcr.io/earthtojake/text-to-cad-dockerkit" -q 2>/dev/null | head -1 || true)
+    old_id=$(docker images --filter "reference=ghcr.io/tryweb/text-to-cad-dockerkit" -q 2>/dev/null | head -1 || true)
     if [ -n "$old_id" ]; then
         echo "  當前映像 ID: ${old_id:0:12}"
     else
-        info "本地尚無 ghcr.io/earthtojake/text-to-cad-dockerkit 映像"
+        info "本地尚無 ghcr.io/tryweb/text-to-cad-dockerkit 映像"
     fi
 
     echo "  正在拉取..."
@@ -209,7 +209,7 @@ pull_image() {
     fi
 
     local new_id
-    new_id=$(docker images --filter "reference=ghcr.io/earthtojake/text-to-cad-dockerkit" -q 2>/dev/null | head -1 || true)
+    new_id=$(docker images --filter "reference=ghcr.io/tryweb/text-to-cad-dockerkit" -q 2>/dev/null | head -1 || true)
     if [ -n "$new_id" ] && [ "$new_id" != "$old_id" ] && [ -n "$old_id" ]; then
         echo "  新映像 ID: ${new_id:0:12}"
     fi

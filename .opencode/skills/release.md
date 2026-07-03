@@ -176,7 +176,7 @@ git push origin v{VERSION}
 
 This triggers the GitHub Actions CI workflow which will:
 - Build and test the image
-- On tag push: push image to `ghcr.io/earthtojake/text-to-cad-dockerkit`
+- On tag push: push image to `ghcr.io/tryweb/text-to-cad-dockerkit`
 - Create a GitHub Release with auto-generated body containing:
   - Docker pull command
   - Quick start instructions
@@ -190,8 +190,8 @@ After push, inform the user:
 Release v{VERSION} complete.
 
 Tag: v{VERSION}
-Image: ghcr.io/earthtojake/text-to-cad-dockerkit:v{VERSION}
-Release: https://github.com/earthtojake/text-to-cad-dockerkit/releases/tag/v{VERSION}
+Image: ghcr.io/tryweb/text-to-cad-dockerkit:v{VERSION}
+Release: https://github.com/tryweb/text-to-cad-dockerkit/releases/tag/v{VERSION}
 ```
 
 ## Rules
