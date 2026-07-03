@@ -105,18 +105,32 @@ backup_files() {
     fi
 }
 
+download_file() {
+    local url="$1" output="$2"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$output"
+    else
+        wget -q "$url" -O "$output"
+    fi
+}
+
+fetch_stdout() {
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$1"
+    else
+        wget -q "$1" -O-
+    fi
+}
+
 # ──────────────────────────────────────────────────────────
 # Step 4 — Update compose files from upstream
 # ──────────────────────────────────────────────────────────
 update_compose() {
     header "4. 更新 docker-compose 檔案"
 
-    DOWNLOAD_TOOL="curl -fsSL"
-    command -v curl &>/dev/null || DOWNLOAD_TOOL="wget -qO-"
-
     for f in docker-compose.yml docker-compose.dev.yml; do
         echo "  下載最新 ${f}..."
-        if $DOWNLOAD_TOOL "$REPO_URL/${f}" -o "${f}.new" && [ -s "${f}.new" ]; then
+        if download_file "$REPO_URL/${f}" "${f}.new" && [ -s "${f}.new" ]; then
             mv "${f}.new" "${f}"
             ok "${f} 已更新"
         else
@@ -132,12 +146,9 @@ update_compose() {
 merge_env() {
     header "5. 合併 .env 設定"
 
-    DOWNLOAD_TOOL="curl -fsSL"
-    command -v curl &>/dev/null || DOWNLOAD_TOOL="wget -qO-"
-
     if [ ! -f ".env" ]; then
         warn ".env 不存在，從 upstream 下載"
-        $DOWNLOAD_TOOL "$REPO_URL/.env.example" -o .env
+        download_file "$REPO_URL/.env.example" .env
         ok ".env 已建立 (使用預設值)"
         info "請編輯 .env 中的 LOCAL_UID / LOCAL_GID 等自訂值"
         return
@@ -145,7 +156,7 @@ merge_env() {
 
     local tmp_example
     tmp_example=$(mktemp)
-    $DOWNLOAD_TOOL "$REPO_URL/.env.example" -o "$tmp_example" || {
+    fetch_stdout "$REPO_URL/.env.example" > "$tmp_example" || {
         rm -f "$tmp_example"
         warn "無法下載 .env.example，跳過 env 合併"
         return

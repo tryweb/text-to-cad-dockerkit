@@ -41,6 +41,18 @@ set_env_value() {
 }
 
 # ──────────────────────────────────────────────────────────
+# Download helper (curl/wget abstraction)
+# ──────────────────────────────────────────────────────────
+download_file() {
+    local url="$1" output="$2"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$output"
+    else
+        wget -q "$url" -O "$output"
+    fi
+}
+
+# ──────────────────────────────────────────────────────────
 # Step 1 — System requirements
 # ──────────────────────────────────────────────────────────
 check_system() {
@@ -100,14 +112,9 @@ check_docker() {
 download_files() {
     header "3. 下載設定檔案"
 
-    DOWNLOAD_TOOL="curl -fsSL"
-    if ! command -v curl &>/dev/null; then
-        DOWNLOAD_TOOL="wget -qO-"
-    fi
-
     if [ ! -f "docker-compose.yml" ]; then
         echo "  下載 docker-compose.yml..."
-        $DOWNLOAD_TOOL "$REPO_URL/docker-compose.yml" -o docker-compose.yml
+        download_file "$REPO_URL/docker-compose.yml" docker-compose.yml
         ok "docker-compose.yml 已下載"
     else
         ok "docker-compose.yml 已存在"
@@ -115,7 +122,7 @@ download_files() {
 
     if [ ! -f "docker-compose.dev.yml" ]; then
         echo "  下載 docker-compose.dev.yml..."
-        $DOWNLOAD_TOOL "$REPO_URL/docker-compose.dev.yml" -o docker-compose.dev.yml
+        download_file "$REPO_URL/docker-compose.dev.yml" docker-compose.dev.yml
         ok "docker-compose.dev.yml 已下載"
     else
         ok "docker-compose.dev.yml 已存在"
@@ -123,7 +130,7 @@ download_files() {
 
     if [ ! -f ".env" ]; then
         echo "  下載 .env.example..."
-        $DOWNLOAD_TOOL "$REPO_URL/.env.example" -o .env
+        download_file "$REPO_URL/.env.example" .env
         ok ".env 已建立，請編輯設定"
     else
         ok ".env 已存在"
@@ -131,7 +138,7 @@ download_files() {
 
     if [ ! -f "entrypoint.sh" ]; then
         echo "  下載 entrypoint.sh..."
-        $DOWNLOAD_TOOL "$REPO_URL/entrypoint.sh" -o entrypoint.sh
+        download_file "$REPO_URL/entrypoint.sh" entrypoint.sh
         chmod +x entrypoint.sh
         ok "entrypoint.sh 已下載"
     else
@@ -144,7 +151,7 @@ download_files() {
 
     if [ ! -f "scripts/verify.sh" ]; then
         echo "  下載 scripts/verify.sh..."
-        $DOWNLOAD_TOOL "$REPO_URL/scripts/verify.sh" -o scripts/verify.sh
+        download_file "$REPO_URL/scripts/verify.sh" scripts/verify.sh
         chmod +x scripts/verify.sh
         ok "scripts/verify.sh 已下載"
     else
@@ -153,15 +160,9 @@ download_files() {
 
     echo
     echo "  下載最新 upgrade.sh..."
-    $DOWNLOAD_TOOL "$REPO_URL/upgrade.sh" -o upgrade.sh
+    download_file "$REPO_URL/upgrade.sh" upgrade.sh
     chmod +x upgrade.sh
     ok "upgrade.sh 已就緒 (後續執行 ./upgrade.sh 即可升級)"
-
-    echo
-    DOWNLOAD_TOOL="curl -fsSL"
-    if ! command -v curl &>/dev/null; then
-        DOWNLOAD_TOOL="wget -qO-"
-    fi
 }
 
 # ──────────────────────────────────────────────────────────
@@ -353,12 +354,8 @@ delegate_to_upgrade_if_installed() {
     echo
 
     if [ ! -f "upgrade.sh" ]; then
-        DOWNLOAD_TOOL="curl -fsSL"
-        if ! command -v curl &>/dev/null; then
-            DOWNLOAD_TOOL="wget -qO-"
-        fi
         echo "  下載 upgrade.sh..."
-        $DOWNLOAD_TOOL "$REPO_URL/upgrade.sh" -o upgrade.sh
+        download_file "$REPO_URL/upgrade.sh" upgrade.sh
         chmod +x upgrade.sh
         echo "  ✅ upgrade.sh 已就緒"
     fi
