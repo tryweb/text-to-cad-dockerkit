@@ -314,7 +314,7 @@ show_info() {
 
     HOST_IP=""
     if command -v ip &>/dev/null; then
-        HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[^ ]+' | head -1)
+        HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' | head -1)
     elif command -v hostname &>/dev/null; then
         HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}' | grep -v '^fe80\|^::' | head -1)
     fi
