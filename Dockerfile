@@ -1,8 +1,14 @@
 # syntax=docker/dockerfile:1
-FROM alpine:3.20 AS upstream-fetcher
+ARG ALPINE_VERSION=3.20
+ARG UBUNTU_VERSION=22.04
+ARG NODE_IMAGE=node:20-slim
+ARG NODE_SETUP_MAJOR=20
+ARG TEXT_TO_CAD_VERSION=0.3.7
+ARG OPENCODE_AI_VERSION=1.17.11
+ARG TTYD_VERSION=1.7.7
+
+FROM alpine:${ALPINE_VERSION} AS upstream-fetcher
 ARG TEXT_TO_CAD_VERSION
-RUN test -n "$TEXT_TO_CAD_VERSION" || \
-    (echo "ERROR: TEXT_TO_CAD_VERSION build-arg is required" >&2 && exit 1)
 RUN apk add --no-cache curl tar
 WORKDIR /upstream
 RUN curl -fsSL \
@@ -12,14 +18,16 @@ RUN curl -fsSL \
     mv text-to-cad-* text-to-cad && \
     rm -f upstream.tar.gz
 
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:${UBUNTU_VERSION} AS builder
 ARG TEXT_TO_CAD_VERSION
+ARG NODE_SETUP_MAJOR
+ARG OPENCODE_AI_VERSION
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl gnupg build-essential \
     python3.11 python3.11-dev python3.11-venv \
     && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_SETUP_MAJOR}.x" | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 ENV VIRTUAL_ENV=/opt/venv
@@ -32,13 +40,17 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir build123d numpy ocp-vscode playwright && \
     pip install --no-cache-dir skills/cad/scripts/packages/cadpy && \
     python -m playwright install chromium --with-deps && \
-    npm install -g opencode-ai && \
+    npm install -g "opencode-ai@${OPENCODE_AI_VERSION}" && \
     NPM_PREFIX="$(npm config get prefix)" && \
     mkdir -p /tmp/opencode-stage && \
     cp -L "${NPM_PREFIX}/bin/opencode" /tmp/opencode-stage/ && \
     cp -r "${NPM_PREFIX}/lib/node_modules/opencode-ai" /tmp/opencode-stage/
-FROM ubuntu:22.04 AS runtime
+
+FROM ${NODE_IMAGE} AS node-runtime
+
+FROM ubuntu:${UBUNTU_VERSION} AS runtime
 ARG TEXT_TO_CAD_VERSION
+ARG TTYD_VERSION
 LABEL org.opencontainers.image.title="text-to-cad Workbench" \
       org.opencontainers.image.description="Docker workbench for earthtojake/text-to-cad" \
       org.opencontainers.image.version="${TEXT_TO_CAD_VERSION}" \
@@ -52,7 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libcairo2 libasound2 passwd xz-utils netcat tmux \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL \
-    "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64" \
+    "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64" \
     -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd
 COPY --from=builder /upstream/text-to-cad /opt/upstream-src
 COPY --from=builder /opt/venv /opt/venv
@@ -60,8 +72,8 @@ COPY --from=builder /opt/playwright-browsers /opt/playwright-browsers
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 ENV PATH="/opt/venv/bin:$PATH"
 RUN python -m playwright install-deps chromium
-COPY --from=node:20-slim /usr/local/bin/ /usr/local/bin/
-COPY --from=node:20-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node-runtime /usr/local/bin/ /usr/local/bin/
+COPY --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /tmp/opencode-stage/opencode /usr/local/bin/opencode
 COPY --from=builder /tmp/opencode-stage/opencode-ai /usr/local/lib/node_modules/opencode-ai
 ENV NODE_PATH="/usr/local/lib/node_modules"
