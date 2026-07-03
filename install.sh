@@ -218,7 +218,12 @@ setup_env() {
     echo "  請選擇 Workspace 儲存方式:"
     echo "    1) Named Volume (預設，完全 Docker 管理)"
     echo "    2) Bind Mount ./workspace (可直接用本地 IDE 編輯)"
-    read -r -p "  選擇 [1/2]: " WS_CHOICE
+    if [ -n "${WORKSPACE_CHOICE:-}" ]; then
+        WS_CHOICE="$WORKSPACE_CHOICE"
+        echo "  選擇: $WS_CHOICE (from WORKSPACE_CHOICE env)"
+    else
+        read -r -p "  選擇 [1/2]: " WS_CHOICE
+    fi
 
     case "$WS_CHOICE" in
         2)
