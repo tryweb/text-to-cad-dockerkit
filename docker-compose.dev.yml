@@ -1,0 +1,15 @@
+# Dev overlay — adds local build context on top of docker-compose.yml.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+#
+# To avoid repeating -f flags, set COMPOSE_FILE:
+#   export COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
+#   docker compose up -d
+
+services:
+  cad-workbench:
+    build:
+      context: .
+    image: text-to-cad-workbench:dev
