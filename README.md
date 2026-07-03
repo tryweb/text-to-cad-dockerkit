@@ -11,7 +11,7 @@ all from one `docker compose` command.
 - Docker Engine 24+ with Compose V2 plugin
 - Git (for version tracking, not required at runtime)
 
-## Quick Start
+## Quick Start (Local Development)
 
 ```bash
 # 1. Configure environment
@@ -19,19 +19,39 @@ cp .env.example .env
 # Edit .env: set LOCAL_UID / LOCAL_GID to match your host user
 #   (run `id -u` and `id -g` to see yours)
 
-# 2. Build the image
-docker compose build
-
-# 3. Start the stack
+# 2. Build and start the stack (dev mode, builds from source)
+export COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
 docker compose up -d
 
-# 4. Verify everything works
+# 3. Verify everything works
 ./scripts/verify.sh
 
-# 5. Open in browser
+# 4. Open in browser
 # Terminal: http://localhost:3001
 # Viewer:   http://localhost:3002
 ```
+
+> `COMPOSE_FILE` combines the production and dev compose files so you don't
+> need `-f` flags on every command. Without it, use
+> `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
+
+## Production Usage (Pre-built Image)
+
+When consuming an image from a registry (no local build needed):
+
+```bash
+# 1. Configure environment
+cp .env.example .env
+
+# 2. Pull and start the stack
+docker compose up -d
+
+# 3. Verify
+./scripts/verify.sh
+```
+
+This uses `docker-compose.yml` only — the service references a pre-built image
+from GitHub Container Registry (ghcr.io). No local compilation is required.
 
 ## Configuration
 
@@ -145,14 +165,50 @@ docker compose up -d      # creates a fresh volume with new seed content
 ```
 text-to-cad-dockerkit/
 ├── Dockerfile              # Multi-stage image build from upstream release
-├── docker-compose.yml      # Workbench service topology
+├── docker-compose.yml      # Production compose (registry image)
+├── docker-compose.dev.yml  # Dev overlay (adds local build context)
 ├── entrypoint.sh           # Container entrypoint (seeding, remap, process mgmt)
 ├── .env.example            # Runtime environment variable template
+├── .github/workflows/
+│   └── ci.yml              # CI workflow (build → test → push → release)
 ├── scripts/
 │   ├── fetch-upstream.sh   # Download upstream release outside Docker build
 │   └── verify.sh           # Post-startup verification workflow
 └── README.md
 ```
+
+## CI/CD
+
+The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+
+| Event | Trigger | Jobs |
+|---|---|---|
+| Push to `main` | `push` | Build → Test |
+| Pull request to `main` | `pull_request` | Build → Test |
+| Tag `v*` | `push` tag | Build → Test → Push to GHCR → Create Release |
+| Manual | `workflow_dispatch` | Build → Test |
+
+**Push job**: Logs into `ghcr.io` using `GITHUB_TOKEN`, tags the image with the
+release version, commit SHA, and `latest`, then pushes all tags.
+
+**Release job**: Generates a changelog from `git log` since the last tag and
+creates a GitHub Release with the image pull command.
+
+### CI Image Flow
+
+1. `Build Image` — builds the Dockerfile with Buildx, caches via `type=gha`
+2. `Integration Tests` — loads the built image, starts the full compose stack
+   using a generated `docker-compose.override.yml`, runs `scripts/verify.sh`
+3. `Push to GHCR` — (tags only) authenticates and publishes the image
+4. `Create Release` — (tags only) drafts a GitHub Release
+
+### Environment Variables for CI
+
+| Variable | Purpose |
+|---|---|
+| `REGISTRY` | Container registry (default: `ghcr.io`) |
+| `IMAGE_NAMESPACE` | Org/repo path for the image (default: `earthtojake/text-to-cad-dockerkit`) |
+| `IMAGE_TAG` | Image tag for production compose (default: `latest`) |
 
 ## Architecture
 
