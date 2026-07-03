@@ -10,6 +10,25 @@ all from one `docker compose` command.
 
 - Docker Engine 24+ with Compose V2 plugin
 - Git (for version tracking, not required at runtime)
+- `curl` or `wget` (for one-liner install)
+
+## Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tryweb/text-to-cad-dockerkit/main/install.sh | bash
+```
+
+The install script will:
+
+1. **Check** your system meets the minimum requirements (2+ CPU cores, 4+ GB RAM, 10+ GB disk)
+2. **Verify** Docker and Docker Compose are installed and running
+3. **Download** `docker-compose.yml`, `docker-compose.dev.yml`, `entrypoint.sh`, `scripts/verify.sh`, and `upgrade.sh`
+4. **Prompt** for `LOCAL_UID` / `LOCAL_GID` (matching your host user), terminal/viewer ports, and workspace storage type
+5. **Pull** the latest container image
+6. **Start** the stack
+7. **Verify** all services are reachable
+
+> Re-running `install.sh` on an existing installation (when `docker-compose.yml` is already present) automatically downloads `upgrade.sh` and delegates to it — so both commands reach the same upgrade flow.
 
 ## Quick Start (Local Development)
 
@@ -52,6 +71,40 @@ docker compose up -d
 
 This uses `docker-compose.yml` only — the service references a pre-built image
 from GitHub Container Registry (ghcr.io). No local compilation is required.
+
+## Upgrade
+
+To update an existing installation to the latest version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tryweb/text-to-cad-dockerkit/main/upgrade.sh | bash
+```
+
+Or, if you already have the repository cloned:
+
+```bash
+./upgrade.sh
+```
+
+The upgrade script will:
+
+1. **Back up** your current `docker-compose.yml`, `docker-compose.dev.yml`, `.env`, `entrypoint.sh`, and `scripts/` to a timestamped directory (`backup_<timestamp>/`)
+2. **Download** the latest compose files from upstream
+3. **Merge** any new environment variables into your `.env` (preserving your custom values)
+4. **Pull** the latest container image from `ghcr.io`
+5. **Recreate** the container with `docker compose up -d --force-recreate`
+6. **Verify** all services are reachable
+7. **Clean up** dangling images to free disk space
+
+If you need to roll back, the backup directory contains your previous configuration:
+
+```bash
+docker compose down
+cp backup_<timestamp>/docker-compose.yml docker-compose.yml
+cp backup_<timestamp>/docker-compose.dev.yml docker-compose.dev.yml
+cp backup_<timestamp>/.env .env
+docker compose up -d
+```
 
 ## Configuration
 
@@ -169,6 +222,8 @@ text-to-cad-dockerkit/
 ├── docker-compose.dev.yml  # Dev overlay (adds local build context)
 ├── entrypoint.sh           # Container entrypoint (seeding, remap, process mgmt)
 ├── .env.example            # Runtime environment variable template
+├── install.sh              # One-liner install (curl | bash)
+├── upgrade.sh              # One-liner upgrade from existing installation
 ├── .github/workflows/
 │   └── ci.yml              # CI workflow (build → test → push → release)
 ├── scripts/
@@ -209,6 +264,19 @@ creates a GitHub Release with the image pull command.
 | `REGISTRY` | Container registry (default: `ghcr.io`) |
 | `IMAGE_NAMESPACE` | Org/repo path for the image (default: `earthtojake/text-to-cad-dockerkit`) |
 | `IMAGE_TAG` | Image tag for production compose (default: `latest`) |
+
+## Release Process
+
+This repository includes a [release skill](.opencode/skills/release.md) that automates the release workflow:
+
+1. **Verify** the stack is running and passes all checks
+2. **Calculate** the version bump (MAJOR/MINOR/PATCH) from conventional commits since the last tag
+3. **Generate** release notes from `git log`
+4. **Update** `docs/CHANGELOG.md`
+5. **Confirm** with the user before tagging
+6. **Tag and push** — triggers GitHub Actions to build, push to GHCR, and create a GitHub Release
+
+Trigger it via the `/release` slash command in OpenCode.
 
 ## Architecture
 
