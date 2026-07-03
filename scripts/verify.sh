@@ -69,10 +69,11 @@ wait_for_http_200() {
 
 # Detect host address — localhost works on standard Docker hosts;
 # inside a Docker container (DooD) we need the bridge gateway.
+# Uses container name "cad-workbench" directly (works regardless of project name).
 HOST="localhost"
 if ! curl -sf --max-time 2 "http://localhost:${OPENCODE_TTYD_PORT}/" > /dev/null 2>&1; then
-    GATEWAY=$(docker network inspect text-to-cad-dockerkit_default \
-        --format '{{range .IPAM.Config}}{{.Gateway}}{{end}}' 2>/dev/null)
+    GATEWAY=$(docker inspect cad-workbench \
+        --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || true)
     if [ -n "${GATEWAY}" ] && curl -sf --max-time 2 "http://${GATEWAY}:${OPENCODE_TTYD_PORT}/" > /dev/null 2>&1; then
         HOST="${GATEWAY}"
     fi
