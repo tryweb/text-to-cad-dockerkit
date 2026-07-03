@@ -64,15 +64,15 @@ check_system() {
     DISK_KB=$(df -Pk / 2>/dev/null | tail -1 | awk '{print $4}')
     DISK_GB=$((DISK_KB / 1024 / 1024))
 
-    echo "  CPU cores: $CPU_CORES  |  RAM: ${RAM_GB} GB  |  Disk: ${DISK_GB} GB"
+    echo "  CPU cores: $CPU_CORES  |  RAM: ${RAM_GB} GB (${RAM_KB} KB)  |  Disk: ${DISK_GB} GB"
 
     if [ "$CPU_CORES" -lt 2 ]; then
         fail "CPU 核心數不足 (需要至少 2 core)"
     fi
-    if [ "$RAM_GB" -lt 4 ]; then
-        fail "RAM 不足 (需要至少 4 GB)"
+    if [ "$RAM_KB" -lt $((4 * 1024 * 1024)) ]; then
+        fail "RAM 不足 (需要至少 4 GB, 目前 ${RAM_KB} KB)"
     fi
-    if [ "$DISK_GB" -lt 10 ]; then
+    if [ "$DISK_KB" -lt $((10 * 1024 * 1024)) ]; then
         fail "磁碟空間不足 (需要至少 10 GB)"
     fi
 
