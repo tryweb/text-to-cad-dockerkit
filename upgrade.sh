@@ -282,7 +282,7 @@ cleanup_images() {
     header "9. 清理舊映像"
 
     local pruned
-    pruned=$(docker image prune -f 2>&1 | grep -oP 'Total reclaimed space: \K.*' || true)
+    pruned=$(docker image prune -f 2>&1 | sed -n 's/.*Total reclaimed space: \(.*\)/\1/p' || true)
     if [ -n "$pruned" ]; then
         ok "已釋放磁碟空間: ${pruned}"
     else
@@ -296,7 +296,7 @@ cleanup_images() {
 show_info() {
     local host_ip=""
     if command -v ip &>/dev/null; then
-        host_ip=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[^ ]+' | head -1)
+        host_ip=$(ip route get 1.1.1.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' | head -1)
     elif command -v hostname &>/dev/null; then
         host_ip=$(hostname -I 2>/dev/null | awk '{print $1}' | grep -v '^fe80\|^::' | head -1)
     fi
