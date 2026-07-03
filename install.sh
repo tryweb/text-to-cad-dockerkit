@@ -69,8 +69,8 @@ check_system() {
     if [ "$CPU_CORES" -lt 2 ]; then
         fail "CPU 核心數不足 (需要至少 2 core)"
     fi
-    if [ "$RAM_KB" -lt $((4 * 1024 * 1024)) ]; then
-        fail "RAM 不足 (需要至少 4 GB, 目前 ${RAM_KB} KB)"
+    if [ "$RAM_KB" -lt $((3 * 1024 * 1024)) ]; then
+        fail "RAM 不足 (需要至少 3 GB, 目前 ${RAM_KB} KB)"
     fi
     if [ "$DISK_KB" -lt $((10 * 1024 * 1024)) ]; then
         fail "磁碟空間不足 (需要至少 10 GB)"

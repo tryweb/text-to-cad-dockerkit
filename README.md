@@ -20,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/tryweb/text-to-cad-dockerkit/main/i
 
 The install script will:
 
-1. **Check** your system meets the minimum requirements (2+ CPU cores, 4+ GB RAM, 10+ GB disk)
+1. **Check** your system meets the minimum requirements (2+ CPU cores, 3+ GB RAM, 10+ GB disk)
 2. **Verify** Docker and Docker Compose are installed and running
 3. **Download** `docker-compose.yml`, `docker-compose.dev.yml`, `entrypoint.sh`, `scripts/verify.sh`, and `upgrade.sh`
 4. **Prompt** for `LOCAL_UID` / `LOCAL_GID` (matching your host user), terminal/viewer ports, and workspace storage type
