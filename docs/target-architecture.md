@@ -85,11 +85,13 @@ Expected outputs should persist in the named volume, especially:
 
 Recommended environment variables:
 
-- `TEXT_TO_CAD_VERSION`
 - `LOCAL_UID`
 - `LOCAL_GID`
 - `OPENCODE_TTYD_PORT`
 - `VIEWER_HOST_PORT`
+
+Pinned build-time component versions should live in `Dockerfile`, not runtime
+environment files.
 
 Optional future variables:
 

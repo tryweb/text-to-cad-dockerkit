@@ -1,0 +1,165 @@
+name: Upstream Update Check
+
+on:
+  schedule:
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Specific text-to-cad release tag to validate and propose
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-update-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      current-version: ${{ steps.current.outputs.version }}
+      latest-version: ${{ steps.latest.outputs.version }}
+      update-needed: ${{ steps.compare.outputs.update_needed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read current pinned version
+        id: current
+        run: |
+          version="$(python - <<'PY'
+          from pathlib import Path
+
+          for line in Path('Dockerfile').read_text().splitlines():
+              if line.startswith('ARG TEXT_TO_CAD_VERSION='):
+                  print(line.split('=', 1)[1].strip())
+                  break
+          else:
+              raise SystemExit('ARG TEXT_TO_CAD_VERSION not found in Dockerfile')
+          PY
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve target upstream version
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
+        run: |
+          if [ -n "${REQUESTED_VERSION}" ]; then
+            version="${REQUESTED_VERSION}"
+          else
+            version="$(gh release view --repo earthtojake/text-to-cad --json tagName --jq .tagName)"
+          fi
+
+          if [ -z "${version}" ]; then
+            echo "Unable to resolve upstream version" >&2
+            exit 1
+          fi
+
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Compare versions
+        id: compare
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          LATEST_VERSION: ${{ steps.latest.outputs.version }}
+        run: |
+          if [ "${CURRENT_VERSION}" = "${LATEST_VERSION}" ]; then
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          highest="$(printf '%s\n%s\n' "${CURRENT_VERSION}" "${LATEST_VERSION}" | sort -V | tail -n1)"
+          if [ "${highest}" != "${LATEST_VERSION}" ]; then
+            echo "Resolved version ${LATEST_VERSION} is older than current ${CURRENT_VERSION}" >&2
+            exit 1
+          fi
+
+          echo "update_needed=true" >> "$GITHUB_OUTPUT"
+
+  build-and-verify:
+    runs-on: ubuntu-latest
+    needs: check-upstream
+    if: needs.check-upstream.outputs.update-needed == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build test environment
+        run: docker compose build --no-cache --build-arg TEXT_TO_CAD_VERSION=${{ needs.check-upstream.outputs.latest-version }}
+
+      - name: Start test environment
+        run: docker compose up -d
+
+      - name: Verify functionality
+        run: ./scripts/verify.sh
+
+      - name: Tear down test environment
+        if: always()
+        run: docker compose down -v
+
+  create-pull-request:
+    runs-on: ubuntu-latest
+    needs:
+      - check-upstream
+      - build-and-verify
+    if: needs.check-upstream.outputs.update-needed == 'true' && needs.build-and-verify.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update tracked version files
+        env:
+          CURRENT_VERSION: ${{ needs.check-upstream.outputs.current-version }}
+          TARGET_VERSION: ${{ needs.check-upstream.outputs.latest-version }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          current = os.environ['CURRENT_VERSION']
+          target = os.environ['TARGET_VERSION']
+
+          replacements = {
+              Path('Dockerfile'): [
+                  (f'ARG TEXT_TO_CAD_VERSION={current}', f'ARG TEXT_TO_CAD_VERSION={target}'),
+              ],
+          }
+
+          for path, pairs in replacements.items():
+              content = path.read_text()
+              original = content
+              for old, new in pairs:
+                  content = content.replace(old, new)
+              if content == original:
+                  raise SystemExit(f'No changes applied to {path}')
+              path.write_text(content)
+          PY
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ github.token }}
+          base: ${{ github.event.repository.default_branch }}
+          branch: chore/update-text-to-cad-${{ needs.check-upstream.outputs.latest-version }}
+          delete-branch: true
+          commit-message: 'chore: update text-to-cad to ${{ needs.check-upstream.outputs.latest-version }}'
+          title: 'chore: update text-to-cad to ${{ needs.check-upstream.outputs.latest-version }}'
+          body: |
+            ## Summary
+            - update `TEXT_TO_CAD_VERSION` from `${{ needs.check-upstream.outputs.current-version }}` to `${{ needs.check-upstream.outputs.latest-version }}`
+            - validate the updated image with `docker compose build`, `docker compose up -d`, and `./scripts/verify.sh`
+
+            ## Validation
+            - `docker compose build --no-cache`
+            - `docker compose up -d`
+            - `./scripts/verify.sh`
+          labels: dependencies

@@ -37,12 +37,14 @@ docker compose up -d
 
 | Variable | Default | Description |
 |---|---|---|
-| `TEXT_TO_CAD_VERSION` | `0.3.7` | Upstream release tag to build from |
 | `LOCAL_UID` | `1000` | Host user UID for workspace file ownership |
 | `LOCAL_GID` | `1000` | Host user GID for workspace file ownership |
 | `OPENCODE_TTYD_PORT` | `3001` | Host port for the browser terminal |
 | `VIEWER_HOST_PORT` | `3002` | Host port for the CAD Viewer |
 | `WORKSPACE_VOLUME_NAME` | `cad-workbench-workspace` | Named volume for `/workspace` persistence |
+
+Pinned build-time component versions live in `Dockerfile` (`ARG TEXT_TO_CAD_VERSION`,
+`ARG OPENCODE_AI_VERSION`, `ARG TTYD_VERSION`, and related base-image pins).
 
 opencode auth (`auth.json`), config, and cache are persisted in dedicated named
 volumes (`cad-workbench-opencode-data` / `-config` / `-cache`) so they survive
@@ -104,8 +106,8 @@ Generated models persist in `/workspace/models` and `/workspace/output`.
 # 1. Check the latest release
 git ls-remote --tags https://github.com/earthtojake/text-to-cad
 
-# 2. Update the version
-#    Edit .env and change TEXT_TO_CAD_VERSION
+# 2. Update the version pin
+#    Edit Dockerfile and change ARG TEXT_TO_CAD_VERSION=<new-tag>
 
 # 3. Rebuild the image
 docker compose build --no-cache
@@ -145,7 +147,7 @@ text-to-cad-dockerkit/
 ├── Dockerfile              # Multi-stage image build from upstream release
 ├── docker-compose.yml      # Workbench service topology
 ├── entrypoint.sh           # Container entrypoint (seeding, remap, process mgmt)
-├── .env.example            # Environment variable template
+├── .env.example            # Runtime environment variable template
 ├── scripts/
 │   ├── fetch-upstream.sh   # Download upstream release outside Docker build
 │   └── verify.sh           # Post-startup verification workflow
@@ -163,6 +165,7 @@ This is a thin deployment wrapper. Upstream `earthtojake/text-to-cad` owns:
 This repository owns:
 
 - Docker packaging and multi-stage build
+- Pinned install versions for upstream/runtime tooling
 - Docker Compose topology
 - Container entrypoint and workspace seeding
 - UID/GID remapping and port configuration
