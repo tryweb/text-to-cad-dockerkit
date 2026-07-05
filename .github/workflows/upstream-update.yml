@@ -162,7 +162,7 @@ jobs:
           pinned_updates_json="[]"
           if [[ "${#pinned_updates_lines[@]}" -gt 0 ]]; then
             pinned_updates_json="$(
-              printf '%s\n' "${pinned_updates_lines[@]}" | jq -Rn \
+              printf '%s\n' "${pinned_updates_lines[@]}" | jq -Rnc \
                 '[inputs | select(length>0) | split("\t") | {name: .[0], current: .[1], latest: .[2], source: .[3], status: .[4]}]'
             )"
           fi
