@@ -6,6 +6,12 @@ Build a reproducible Docker workbench from pinned upstream release tags. Run CAD
 generation, browse models with the CAD Viewer, and access a browser terminal —
 all from one `docker compose` command.
 
+## Demo
+
+| opencode creating a STEP model | CAD Viewer browsing models |
+|---|---|
+| [![opencode create 3D step](https://img.youtube.com/vi/z5iBFDjM7nM/hqdefault.jpg)](https://www.youtube.com/watch?v=z5iBFDjM7nM) | [![CAD Viewer](https://img.youtube.com/vi/8mfgP6kkEeY/hqdefault.jpg)](https://www.youtube.com/watch?v=8mfgP6kkEeY) |
+
 ## Prerequisites
 
 - Docker Engine 24+ with Compose V2 plugin
