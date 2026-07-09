@@ -22,6 +22,8 @@ services:
       - "opencode-data:/home/opencode/.local/share/opencode"
       - "opencode-config:/home/opencode/.config/opencode"
       - "opencode-cache:/home/opencode/.cache/opencode"
+      - "lean-ctx-data:/home/opencode/.local/share/lean-ctx"
+      - "lean-ctx-state:/home/opencode/.local/state/lean-ctx"
     stdin_open: true
     tty: true
 
@@ -34,3 +36,7 @@ volumes:
     name: cad-workbench-opencode-config
   opencode-cache:
     name: cad-workbench-opencode-cache
+  lean-ctx-data:
+    name: cad-workbench-lean-ctx-data
+  lean-ctx-state:
+    name: cad-workbench-lean-ctx-state

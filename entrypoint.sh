@@ -20,6 +20,9 @@ set -euo pipefail
 : "${UPSTREAM_SRC:=/opt/upstream-src}"
 : "${WORKSPACE_SEED:=/opt/workspace-seed}"
 : "${WORKSPACE:=/workspace}"
+: "${OPENCODE_HOME:=/home/opencode}"
+: "${OPENCODE_CONFIG_DIR:=${OPENCODE_HOME}/.config/opencode}"
+: "${LEAN_CTX_CONFIG_DIR:=${OPENCODE_HOME}/.config/lean-ctx}"
 
 CAD_VIEWER_ROOT_RELATIVE="models"
 CAD_VIEWER_ROOT="${WORKSPACE}/${CAD_VIEWER_ROOT_RELATIVE}"
@@ -154,6 +157,29 @@ ensure_writable_paths() {
     chown "${LOCAL_UID}:${LOCAL_GID}" "${CAD_VIEWER_ROOT}" "${WORKSPACE}/output" 2>/dev/null || true
 }
 
+init_lean_ctx() {
+    if ! command -v lean-ctx &>/dev/null; then
+        echo "[entrypoint] lean-ctx not found — skipping integration setup."
+        return
+    fi
+
+    mkdir -p \
+        "${OPENCODE_CONFIG_DIR}" \
+        "${LEAN_CTX_CONFIG_DIR}" \
+        "${OPENCODE_HOME}/.local/share/lean-ctx" \
+        "${OPENCODE_HOME}/.local/state/lean-ctx" \
+        "${OPENCODE_HOME}/.cache/lean-ctx"
+
+    HOME="${OPENCODE_HOME}" lean-ctx setup --non-interactive --yes >/dev/null 2>&1 || true
+    HOME="${OPENCODE_HOME}" lean-ctx init --agent opencode >/dev/null 2>&1 || true
+
+    rm -f "${OPENCODE_CONFIG_DIR}/opencode.json"
+    HOME="${OPENCODE_HOME}" opencode mcp add lean-ctx -- lean-ctx >/dev/null 2>&1 || true
+
+    chown -R "${LOCAL_UID}:${LOCAL_GID}" "${OPENCODE_HOME}" 2>/dev/null || true
+    echo "[entrypoint] lean-ctx configured for opencode."
+}
+
 # --- 4. Start child processes ------------------------------------------
 pids=()
 
@@ -219,6 +245,7 @@ handle_signal() {
 seed_workspace
 remap_user
 ensure_writable_paths
+init_lean_ctx
 start_artifact_sync_loop
 
 start_ttyd

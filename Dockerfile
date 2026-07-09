@@ -6,6 +6,8 @@ ARG NODE_SETUP_MAJOR=20
 ARG TEXT_TO_CAD_VERSION=0.3.8
 ARG OPENCODE_AI_VERSION=1.17.15
 ARG TTYD_VERSION=1.7.7
+ARG LEANCTX_VERSION=3.9.2
+ARG LEANCTX_SHA256=12b6b99bec2f326920c7372b0bbe457cbac76fbe46d45abdf89dbbc247c17c96
 
 FROM alpine:${ALPINE_VERSION} AS upstream-fetcher
 ARG TEXT_TO_CAD_VERSION
@@ -51,6 +53,8 @@ FROM ${NODE_IMAGE} AS node-runtime
 FROM ubuntu:${UBUNTU_VERSION} AS runtime
 ARG TEXT_TO_CAD_VERSION
 ARG TTYD_VERSION
+ARG LEANCTX_VERSION
+ARG LEANCTX_SHA256
 LABEL org.opencontainers.image.title="text-to-cad Workbench" \
       org.opencontainers.image.description="Docker workbench for earthtojake/text-to-cad" \
       org.opencontainers.image.version="${TEXT_TO_CAD_VERSION}" \
@@ -66,6 +70,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL \
     "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64" \
     -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd
+RUN curl -fsSL \
+    "https://github.com/yvgude/lean-ctx/releases/download/v${LEANCTX_VERSION}/lean-ctx-x86_64-unknown-linux-musl.tar.gz" \
+    -o /tmp/lean-ctx.tar.gz && \
+    printf '%s %s\n' "${LEANCTX_SHA256}" "/tmp/lean-ctx.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/lean-ctx.tar.gz -C /usr/local/bin lean-ctx && \
+    chmod +x /usr/local/bin/lean-ctx && \
+    rm -f /tmp/lean-ctx.tar.gz
 COPY --from=builder /upstream/text-to-cad /opt/upstream-src
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /opt/playwright-browsers /opt/playwright-browsers
@@ -77,6 +88,8 @@ COPY --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /tmp/opencode-stage/opencode /usr/local/bin/opencode
 COPY --from=builder /tmp/opencode-stage/opencode-ai /usr/local/lib/node_modules/opencode-ai
 ENV NODE_PATH="/usr/local/lib/node_modules"
+ENV BASH_ENV="/home/opencode/.config/lean-ctx/env.sh"
+ENV CLAUDE_ENV_FILE="/home/opencode/.config/lean-ctx/env.sh"
 RUN mkdir -p /opt/workspace-seed
 COPY --from=upstream-fetcher /upstream/text-to-cad/README.md /opt/workspace-seed/
 COPY --from=upstream-fetcher /upstream/text-to-cad/benchmarks /opt/workspace-seed/benchmarks
@@ -84,6 +97,25 @@ COPY --from=upstream-fetcher /upstream/text-to-cad/assets /opt/workspace-seed/as
 RUN mkdir -p /opt/workspace-seed/models /opt/workspace-seed/output
 RUN groupadd --system --gid 1000 opencode 2>/dev/null || true && \
     useradd --system --uid 1000 --gid 1000 -m opencode 2>/dev/null || true
+RUN mkdir -p \
+    /home/opencode/.config/lean-ctx \
+    /home/opencode/.local/share/lean-ctx \
+    /home/opencode/.local/state/lean-ctx \
+    /home/opencode/.cache/lean-ctx && \
+    cat > /home/opencode/.config/lean-ctx/config.toml <<'EOF'
+permission_inheritance = "on"
+compression_level = "standard"
+shell_allowlist_extra = [
+  "docker",
+  "docker compose",
+  "git",
+  "node",
+  "npm",
+  "python",
+  "python3",
+]
+savings_footer = "auto"
+EOF
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 EXPOSE 3001 3002
