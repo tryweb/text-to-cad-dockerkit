@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+### Added
+- Integrate lean-ctx context engineering tool
+
+### Changed
+- Update OPENCODE_AI_VERSION to 1.17.18
+- Update upstream pinned dependencies
+- Add demo video links to README
+
 ## [0.2.0] - 2026-07-05
 
 ### Added
