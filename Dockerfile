@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 ARG ALPINE_VERSION=3.20
-ARG UBUNTU_VERSION=22.04
+ARG UBUNTU_VERSION=24.04
 ARG NODE_IMAGE=node:20-slim
 ARG NODE_SETUP_MAJOR=20
-ARG TEXT_TO_CAD_VERSION=0.3.8
+ARG TEXT_TO_CAD_VERSION=0.3.9
 ARG OPENCODE_AI_VERSION=1.17.18
 ARG TTYD_VERSION=1.7.7
-ARG LEANCTX_VERSION=3.9.2
-ARG LEANCTX_SHA256=12b6b99bec2f326920c7372b0bbe457cbac76fbe46d45abdf89dbbc247c17c96
+ARG LEANCTX_VERSION=3.9.6
+ARG LEANCTX_SHA256=a7a450c1bc7c98594a8fda1e66625bfa8d4391749e8b0d444bcbce986d769f2f
 
 FROM alpine:${ALPINE_VERSION} AS upstream-fetcher
 ARG TEXT_TO_CAD_VERSION
@@ -27,13 +27,13 @@ ARG OPENCODE_AI_VERSION
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl gnupg build-essential \
-    python3.11 python3.11-dev python3.11-venv \
+    python3.12 python3.12-dev python3.12-venv \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_SETUP_MAJOR}.x" | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 ENV VIRTUAL_ENV=/opt/venv
-RUN python3.11 -m venv "$VIRTUAL_ENV"
+RUN python3.12 -m venv "$VIRTUAL_ENV"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=upstream-fetcher /upstream/text-to-cad /upstream/text-to-cad
 WORKDIR /upstream/text-to-cad
@@ -61,11 +61,11 @@ LABEL org.opencontainers.image.title="text-to-cad Workbench" \
       org.opencontainers.image.source="https://github.com/earthtojake/text-to-cad"
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 TZ=Etc/UTC
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl python3.11 python3.11-venv \
-    libgl1-mesa-glx libglib2.0-0 libnss3 libnspr4 libatk1.0-0 \
+    ca-certificates curl python3.12 python3.12-venv \
+    libgl1 libglib2.0-0 libnss3 libnspr4 libatk1.0-0 \
     libatk-bridge2.0-0 libcups2 libdrm2 libdbus-1-3 libxkbcommon0 \
     libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2 passwd xz-utils netcat tmux \
+    libpango-1.0-0 libcairo2 libasound2t64 passwd xz-utils netcat-openbsd tmux \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL \
     "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64" \
@@ -95,8 +95,14 @@ COPY --from=upstream-fetcher /upstream/text-to-cad/README.md /opt/workspace-seed
 COPY --from=upstream-fetcher /upstream/text-to-cad/benchmarks /opt/workspace-seed/benchmarks
 COPY --from=upstream-fetcher /upstream/text-to-cad/assets /opt/workspace-seed/assets
 RUN mkdir -p /opt/workspace-seed/models /opt/workspace-seed/output
-RUN groupadd --system --gid 1000 opencode 2>/dev/null || true && \
-    useradd --system --uid 1000 --gid 1000 -m opencode 2>/dev/null || true
+RUN if id ubuntu &>/dev/null 2>&1; then \
+        usermod --login opencode --move-home --home /home/opencode ubuntu && \
+        groupmod --new-name opencode ubuntu; \
+    else \
+        groupadd --gid 1000 opencode && \
+        useradd --uid 1000 --gid 1000 -m opencode; \
+    fi 2>/dev/null; \
+    chown -R 1000:1000 /home/opencode
 RUN mkdir -p \
     /home/opencode/.config/lean-ctx \
     /home/opencode/.local/share/lean-ctx \
