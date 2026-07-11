@@ -52,13 +52,19 @@ docker compose up -d
 ./scripts/verify.sh
 
 # 4. Open in browser
-# Terminal: http://localhost:3001
-# Viewer:   http://localhost:3002
+# Web UI: http://localhost:3000
+# Viewer: http://localhost:3002
 ```
 
 > `COMPOSE_FILE` combines the production and dev compose files so you don't
 > need `-f` flags on every command. Without it, use
 > `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
+
+> **Docker-out-of-Docker (DooD) note:** When running inside a container
+> that uses the host's Docker socket (e.g. ai-engkit), `localhost` ports
+> may not reach sibling containers. The verification script auto-detects
+> the Docker bridge gateway and falls back to it. From a standard Docker
+> host, ports are directly accessible on `localhost`.
 
 ## Production Usage (Pre-built Image)
 
@@ -118,12 +124,12 @@ docker compose up -d
 |---|---|---|
 | `LOCAL_UID` | `1000` | Host user UID for workspace file ownership |
 | `LOCAL_GID` | `1000` | Host user GID for workspace file ownership |
-| `OPENCODE_TTYD_PORT` | `3001` | Host port for the browser terminal |
+| `OPENCHAMBER_PORT` | `3000` | Host port for the OpenChamber Web UI |
 | `VIEWER_HOST_PORT` | `3002` | Host port for the CAD Viewer |
 | `WORKSPACE_VOLUME_NAME` | `cad-workbench-workspace` | Named volume for `/workspace` persistence |
 
 Pinned build-time component versions live in `Dockerfile` (`ARG TEXT_TO_CAD_VERSION`,
-`ARG OPENCODE_AI_VERSION`, `ARG TTYD_VERSION`, and related base-image pins).
+`ARG OPENCODE_AI_VERSION`, `ARG OPENCHAMBER_VERSION`, and related base-image pins).
 
 opencode auth (`auth.json`), config, and cache are persisted in dedicated named
 volumes (`cad-workbench-opencode-data` / `-config` / `-cache`) so they survive
@@ -133,11 +139,12 @@ not force an opencode re-login. To force one, drop the data volume:
 
 ## Usage
 
-### Terminal access
+### Web UI
 
-Open [http://localhost:3001](http://localhost:3001) in your browser. You get a
-shell inside the workbench container with the upstream source tree at
-`/opt/upstream-src` and your persistent workspace at `/workspace`.
+Open [http://localhost:3000](http://localhost:3000) in your browser. You get a
+full-featured web interface for interacting with opencode inside the workbench
+container with the upstream source tree at `/opt/upstream-src` and your
+persistent workspace at `/workspace`.
 
 ### CAD Viewer
 

@@ -97,7 +97,7 @@ Adopt **Option A** for MVP:
 - build from pinned upstream source
 - seed named volume into `/workspace`
 - remap runtime UID/GID
-- expose ttyd and viewer ports
+- expose OpenChamber and viewer ports
 - persist generated artifacts
 - verify startup and basic HTTP/runtime health
 

@@ -305,7 +305,7 @@ show_info() {
         # shellcheck source=/dev/null
         source .env
     fi
-    TTYD_PORT="${OPENCODE_TTYD_PORT:-3001}"
+    CHAMBER_PORT="${OPENCHAMBER_PORT:-3000}"
     VIEWER_PORT="${VIEWER_HOST_PORT:-3002}"
 
     echo
@@ -313,8 +313,8 @@ show_info() {
     echo -e "${BOLD}  Upgrade Complete!${NC}"
     echo -e "${BOLD}========================================${NC}"
     echo
-    echo -e "  ${CYAN}🌐${NC} Terminal: http://${host_ip:-localhost}:${TTYD_PORT}"
-    echo -e "  ${CYAN}🌐${NC} Viewer:   http://${host_ip:-localhost}:${VIEWER_PORT}"
+    echo -e "  ${CYAN}🌐${NC} Web UI: http://${host_ip:-localhost}:${CHAMBER_PORT}"
+    echo -e "  ${CYAN}🌐${NC} Viewer: http://${host_ip:-localhost}:${VIEWER_PORT}"
     echo
     if [ -n "$host_ip" ] && [[ ! "$host_ip" =~ ^127\. ]]; then
         echo "  外部存取請使用上述 IP (非 localhost)"

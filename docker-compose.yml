@@ -9,12 +9,12 @@ services:
     environment:
       - LOCAL_UID=${LOCAL_UID:-1000}
       - LOCAL_GID=${LOCAL_GID:-1000}
-      - OPENCODE_TTYD_PORT=${OPENCODE_TTYD_PORT:-3001}
+      - OPENCHAMBER_PORT=${OPENCHAMBER_PORT:-3000}
       - VIEWER_HOST_PORT=${VIEWER_HOST_PORT:-3002}
       # Root entrypoint → $HOME=/root by default; force it so opencode writes auth.json into the volumes below.
       - HOME=/home/opencode
     ports:
-      - "${OPENCODE_TTYD_PORT:-3001}:${OPENCODE_TTYD_PORT:-3001}"
+      - "${OPENCHAMBER_PORT:-3000}:${OPENCHAMBER_PORT:-3000}"
       - "${VIEWER_HOST_PORT:-3002}:${VIEWER_HOST_PORT:-3002}"
     volumes:
       - "${WORKSPACE_VOLUME_NAME:-cad-workbench-workspace}:/workspace"
@@ -24,6 +24,8 @@ services:
       - "opencode-cache:/home/opencode/.cache/opencode"
       - "lean-ctx-data:/home/opencode/.local/share/lean-ctx"
       - "lean-ctx-state:/home/opencode/.local/state/lean-ctx"
+      # Persist OpenChamber settings (default project, theme, etc.) across restarts.
+      - "openchamber-config:/home/opencode/.config/openchamber"
     stdin_open: true
     tty: true
 
@@ -40,3 +42,5 @@ volumes:
     name: cad-workbench-lean-ctx-data
   lean-ctx-state:
     name: cad-workbench-lean-ctx-state
+  openchamber-config:
+    name: cad-workbench-openchamber-config

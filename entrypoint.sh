@@ -8,14 +8,14 @@ set -euo pipefail
 #   1. Seed /workspace from /opt/workspace-seed on first boot
 #   2. Remap runtime UID/GID to LOCAL_UID / LOCAL_GID
 #   3. Ensure writable output directories
-#   4. Start ttyd, viewer, and application processes
+#   4. Start OpenChamber, viewer, and application processes
 #   5. Forward SIGTERM/SIGINT and exit with first child's code
 # ============================================================
 
 # --- Configuration defaults --------------------------------------------
 : "${LOCAL_UID:=1000}"
 : "${LOCAL_GID:=1000}"
-: "${OPENCODE_TTYD_PORT:=3001}"
+: "${OPENCHAMBER_PORT:=3000}"
 : "${VIEWER_HOST_PORT:=3002}"
 : "${UPSTREAM_SRC:=/opt/upstream-src}"
 : "${WORKSPACE_SEED:=/opt/workspace-seed}"
@@ -67,12 +67,13 @@ sync_cad_artifacts() {
 
         target_path="${CAD_VIEWER_ROOT}/${rel_path}"
         mkdir -p "$(dirname "${target_path}")"
+        chown "${LOCAL_UID}:${LOCAL_GID}" "$(dirname "${target_path}")" 2>/dev/null || true
 
         if [ -L "${target_path}" ]; then
             rm -f "${target_path}"
         fi
 
-        if [ -f "${target_path}" ] && cmp -s "${source_path}" "${target_path}"; then
+        if [ -f "${target_path}" ] && cmp -s "${source_path}" "${target_path}" ]; then
             continue
         fi
 
@@ -180,26 +181,52 @@ init_lean_ctx() {
     echo "[entrypoint] lean-ctx configured for opencode."
 }
 
+init_openchamber() {
+    local oc_config="${OPENCODE_HOME}/.config/openchamber"
+    local oc_settings="${oc_config}/settings.json"
+    local workspace_id
+    workspace_id="path_$(printf '%s' "${WORKSPACE}" | base64 -w0)"
+
+    if [ -f "${oc_settings}" ]; then
+        return
+    fi
+
+    mkdir -p "${oc_config}"
+    chown "${LOCAL_UID}:${LOCAL_GID}" "${oc_config}"
+
+    local now_ms
+    now_ms=$(date +%s)000
+
+    cat > "${oc_settings}" <<EOF
+{
+  "lastDirectory": "${WORKSPACE}",
+  "homeDirectory": "${WORKSPACE}",
+  "projects": [
+    {
+      "id": "${workspace_id}",
+      "path": "${WORKSPACE}",
+      "addedAt": ${now_ms},
+      "lastOpenedAt": ${now_ms}
+    }
+  ],
+  "activeProjectId": "${workspace_id}"
+}
+EOF
+    chown "${LOCAL_UID}:${LOCAL_GID}" "${oc_settings}"
+    echo "[entrypoint] OpenChamber default project seeded: ${WORKSPACE}"
+}
+
 # --- 4. Start child processes ------------------------------------------
 pids=()
 
-start_ttyd() {
-    if command -v ttyd &>/dev/null; then
-        echo "[entrypoint] Starting ttyd on port ${OPENCODE_TTYD_PORT}..."
-        if command -v opencode &>/dev/null; then
-            ttyd --port "${OPENCODE_TTYD_PORT}" \
-                 --writable \
-                 --client-option "disableLeaveAlert=true" \
-                 opencode &
-        else
-            ttyd --port "${OPENCODE_TTYD_PORT}" \
-                 --writable \
-                 --client-option "disableLeaveAlert=true" \
-                 bash &
-        fi
+start_openchamber() {
+    if command -v openchamber &>/dev/null; then
+        echo "[entrypoint] Starting OpenChamber on port ${OPENCHAMBER_PORT}..."
+        export OPENCHAMBER_ALLOW_UNAUTHENTICATED_LAN=true
+        openchamber serve --port "${OPENCHAMBER_PORT}" --host 0.0.0.0 --foreground &
         pids+=($!)
     else
-        echo "[entrypoint] WARNING: ttyd not found — terminal endpoint unavailable."
+        echo "[entrypoint] WARNING: openchamber not found — web UI unavailable."
     fi
 }
 
@@ -246,9 +273,10 @@ seed_workspace
 remap_user
 ensure_writable_paths
 init_lean_ctx
+init_openchamber
 start_artifact_sync_loop
 
-start_ttyd
+start_openchamber
 start_viewer
 
 # Discover and log upstream startup contract
@@ -266,7 +294,7 @@ trap 'handle_signal INT' INT
 trap 'handle_signal QUIT' QUIT
 
 echo "[entrypoint] Running with PIDs: ${pids[*]}"
-echo "[entrypoint] Terminal:  http://localhost:${OPENCODE_TTYD_PORT}"
+echo "[entrypoint] Web UI:    http://localhost:${OPENCHAMBER_PORT}"
 echo "[entrypoint] Viewer:    http://localhost:${VIEWER_HOST_PORT}"
 
 # Wait for any child to exit, then propagate

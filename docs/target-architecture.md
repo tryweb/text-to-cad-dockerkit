@@ -44,7 +44,7 @@ Host
       ├─ /opt/upstream-src        # baked upstream release source
       ├─ /opt/workspace-seed      # image seed content
       ├─ /workspace               # named volume mounted at runtime
-      ├─ ttyd                     # browser terminal endpoint
+      ├─ OpenChamber          # browser web UI endpoint
       ├─ viewer                   # browser viewer endpoint
       └─ models output            # persisted generated artifacts
 ```
@@ -87,7 +87,7 @@ Recommended environment variables:
 
 - `LOCAL_UID`
 - `LOCAL_GID`
-- `OPENCODE_TTYD_PORT`
+- `OPENCHAMBER_PORT`
 - `VIEWER_HOST_PORT`
 
 Pinned build-time component versions should live in `Dockerfile`, not runtime

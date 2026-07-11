@@ -73,7 +73,7 @@ Container starts as root so it can:
 
 The PR packages a usable runtime environment with:
 
-- ttyd terminal endpoint
+- OpenChamber web UI endpoint
 - viewer dev server
 - Docker verification script
 - operational docs and OpenCode skills

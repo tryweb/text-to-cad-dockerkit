@@ -199,11 +199,11 @@ setup_env() {
     fi
 
     # Ports
-    if [ -z "${OPENCODE_TTYD_PORT:-}" ]; then
-        read -r -p "  輸入 Terminal 埠號 (Enter 使用預設 3001): " TTYD_INPUT
-        TTYD_PORT="${TTYD_INPUT:-3001}"
-        set_env_value "OPENCODE_TTYD_PORT" "$TTYD_PORT"
-        ok "Terminal 埠號已設定為 ${TTYD_PORT}"
+    if [ -z "${OPENCHAMBER_PORT:-}" ]; then
+        read -r -p "  輸入 Web UI 埠號 (Enter 使用預設 3000): " CHAMBER_INPUT
+        CHAMBER_PORT="${CHAMBER_INPUT:-3000}"
+        set_env_value "OPENCHAMBER_PORT" "$CHAMBER_PORT"
+        ok "Web UI 埠號已設定為 ${CHAMBER_PORT}"
     fi
 
     if [ -z "${VIEWER_HOST_PORT:-}" ]; then
@@ -323,12 +323,12 @@ show_info() {
         # shellcheck source=/dev/null
         source .env
     fi
-    TTYD_PORT="${OPENCODE_TTYD_PORT:-3001}"
+    TTYD_PORT="${OPENCHAMBER_PORT:-3000}"
     VIEWER_PORT="${VIEWER_HOST_PORT:-3002}"
 
     echo
-    echo -e "  ${CYAN}🌐${NC} Terminal: http://${HOST_IP:-localhost}:${TTYD_PORT}"
-    echo -e "  ${CYAN}🌐${NC} Viewer:   http://${HOST_IP:-localhost}:${VIEWER_PORT}"
+    echo -e "  ${CYAN}🌐${NC} Web UI: http://${HOST_IP:-localhost}:${TTYD_PORT}"
+    echo -e "  ${CYAN}🌐${NC} Viewer: http://${HOST_IP:-localhost}:${VIEWER_PORT}"
     echo
     echo "  產生 CAD 模型:"
     echo "    docker compose exec cad-workbench bash"

@@ -13,7 +13,7 @@ set -euo pipefail
 #
 # Exits 0 if all checks pass, non-zero otherwise.
 
-: "${OPENCODE_TTYD_PORT:=3001}"
+: "${OPENCHAMBER_PORT:=3000}"
 : "${VIEWER_HOST_PORT:=3002}"
 : "${LOCAL_UID:=1000}"
 : "${LOCAL_GID:=1000}"
@@ -46,9 +46,14 @@ check_catalog_visibility() {
         sleep 1
     done
 
+    local source_dir
+    source_dir="$(dirname "${source_path}")"
+    local rm_targets=("${source_path}" "/workspace/models/${root_relative}")
+    if [ "${source_dir}" != "/workspace" ]; then
+        rm_targets+=("${source_dir}" "/workspace/models/$(dirname "${root_relative}")")
+    fi
     docker compose exec -T --user opencode cad-workbench rm -rf -f \
-        "${source_path}" \
-        "/workspace/models/${root_relative}" > /dev/null 2>&1 || true
+        "${rm_targets[@]}" 2>/dev/null || true
 
     [ "${visible}" -eq 1 ]
 }
@@ -68,24 +73,37 @@ wait_for_http_200() {
 }
 
 # Detect host address — localhost works on standard Docker hosts;
-# inside a Docker container (DooD) we need the bridge gateway.
+# inside a Docker container (DooD) we need the bridge gateway or the
+# container's own IP on the Docker network.
 # Uses container name "cad-workbench" directly (works regardless of project name).
 HOST="localhost"
-if ! curl -sf --max-time 2 "http://localhost:${OPENCODE_TTYD_PORT}/" > /dev/null 2>&1; then
+
+# Detect DooD: if cad-workbench runs on a bridge network and we can't
+# reach it via localhost (common when another OpenChamber occupies :3000),
+# fall back to the gateway or container IP.
+CONTAINER_IP=$(docker inspect cad-workbench \
+    --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || true)
+
+if [ -n "${CONTAINER_IP}" ]; then
     GATEWAY=$(docker inspect cad-workbench \
         --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || true)
-    if [ -n "${GATEWAY}" ] && curl -sf --max-time 2 "http://${GATEWAY}:${OPENCODE_TTYD_PORT}/" > /dev/null 2>&1; then
+    # Try gateway first (accessible from sibling containers and most host setups)
+    if [ -n "${GATEWAY}" ] && curl -sf --max-time 2 "http://${GATEWAY}:${VIEWER_HOST_PORT}/" > /dev/null 2>&1; then
         HOST="${GATEWAY}"
+    elif curl -sf --max-time 2 "http://localhost:${VIEWER_HOST_PORT}/" > /dev/null 2>&1; then
+        HOST="localhost"
+    elif [ -n "${CONTAINER_IP}" ] && curl -sf --max-time 2 "http://${CONTAINER_IP}:${VIEWER_HOST_PORT}/" > /dev/null 2>&1; then
+        HOST="${CONTAINER_IP}"
     fi
 fi
 
 echo ""
-echo "=== Check 1/3: Terminal endpoint ==="
-echo "Probing http://${HOST}:${OPENCODE_TTYD_PORT}/ ..."
-if wait_for_http_200 "http://${HOST}:${OPENCODE_TTYD_PORT}/" 5 1; then
-    pass "Terminal endpoint returned 200"
+echo "=== Check 1/3: Web UI endpoint ==="
+echo "Probing http://${HOST}:${OPENCHAMBER_PORT}/ ..."
+if wait_for_http_200 "http://${HOST}:${OPENCHAMBER_PORT}/" 5 1; then
+    pass "Web UI endpoint returned 200"
 else
-    fail "Terminal endpoint unreachable on port ${OPENCODE_TTYD_PORT}"
+    fail "Web UI endpoint unreachable on port ${OPENCHAMBER_PORT}"
 fi
 
 echo ""
@@ -120,7 +138,7 @@ echo "Writing sentinel file '${SENTINEL}' to /workspace..."
 if docker compose exec -T --user opencode cad-workbench touch "/workspace/${SENTINEL}" 2>/dev/null; then
     echo "  Sentinal written. Restarting container..."
     docker compose restart cad-workbench > /dev/null 2>&1
-    wait_for_http_200 "http://${HOST}:${OPENCODE_TTYD_PORT}/" 10 1 || true
+    wait_for_http_200 "http://${HOST}:${OPENCHAMBER_PORT}/" 10 1 || true
 
     if docker compose exec -T --user opencode cad-workbench stat "/workspace/${SENTINEL}" > /dev/null 2>&1; then
         OWNER=$(docker compose exec -T --user opencode cad-workbench stat -c '%u:%g' "/workspace/${SENTINEL}" 2>/dev/null | tr -d '\r')
