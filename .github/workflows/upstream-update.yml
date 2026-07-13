@@ -103,7 +103,7 @@ jobs:
           declare -A PINNED_MAP=()
           while IFS='=' read -r name ver; do
             case "$name" in
-              TEXT_TO_CAD_VERSION|OPENCODE_AI_VERSION|TTYD_VERSION)
+              TEXT_TO_CAD_VERSION|OPENCODE_AI_VERSION|OPENCHAMBER_VERSION|LEANCTX_VERSION)
                 PINNED_MAP["$name"]="$ver"
                 ;;
             esac
@@ -132,8 +132,12 @@ jobs:
                 source='opencode-ai'
                 latest="$(get_npm_version "$source")"
                 ;;
-              TTYD_VERSION)
-                source='tsl0922/ttyd'
+              OPENCHAMBER_VERSION)
+                source='@openchamber/web'
+                latest="$(get_npm_version "$source")"
+                ;;
+              LEANCTX_VERSION)
+                source='yvgude/lean-ctx'
                 latest="$(get_github_tag "$source")"
                 ;;
             esac
@@ -173,7 +177,7 @@ jobs:
             printf '  "timestamp": "%s",\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             printf '  "pinned": {\n'
             first=true
-            for name in TEXT_TO_CAD_VERSION OPENCODE_AI_VERSION TTYD_VERSION; do
+            for name in TEXT_TO_CAD_VERSION OPENCODE_AI_VERSION OPENCHAMBER_VERSION LEANCTX_VERSION; do
               if [[ -n "${PINNED_MAP[$name]:-}" ]]; then
                 if [[ "$first" == true ]]; then first=false; else printf ',\n'; fi
                 printf '    "%s": %s' "$name" "$(json_quote "${PINNED_MAP[$name]}")"
