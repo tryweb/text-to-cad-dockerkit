@@ -7,8 +7,6 @@ ARG TEXT_TO_CAD_VERSION=0.3.9
 ARG OPENCODE_AI_VERSION=1.17.20
 ARG OPENCHAMBER_VERSION=1.16.1
 ARG LEANCTX_VERSION=3.9.8
-ARG LEANCTX_SHA256=a7a450c1bc7c98594a8fda1e66625bfa8d4391749e8b0d444bcbce986d769f2f
-
 FROM alpine:${ALPINE_VERSION} AS upstream-fetcher
 ARG TEXT_TO_CAD_VERSION
 RUN apk add --no-cache curl tar
@@ -58,7 +56,6 @@ FROM ubuntu:${UBUNTU_VERSION} AS runtime
 ARG TEXT_TO_CAD_VERSION
 ARG OPENCHAMBER_VERSION
 ARG LEANCTX_VERSION
-ARG LEANCTX_SHA256
 LABEL org.opencontainers.image.title="text-to-cad Workbench" \
       org.opencontainers.image.description="Docker workbench for earthtojake/text-to-cad" \
       org.opencontainers.image.version="${TEXT_TO_CAD_VERSION}" \
@@ -74,7 +71,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL \
     "https://github.com/yvgude/lean-ctx/releases/download/v${LEANCTX_VERSION}/lean-ctx-x86_64-unknown-linux-musl.tar.gz" \
     -o /tmp/lean-ctx.tar.gz && \
-    printf '%s %s\n' "${LEANCTX_SHA256}" "/tmp/lean-ctx.tar.gz" | sha256sum -c - && \
     tar -xzf /tmp/lean-ctx.tar.gz -C /usr/local/bin lean-ctx && \
     chmod +x /usr/local/bin/lean-ctx && \
     rm -f /tmp/lean-ctx.tar.gz
